@@ -9,10 +9,9 @@
 void runCommand(const char *args[]);
 void cdCommand(const char* args[]);
 char** parseTokens(char input[]);
+void addToken(char* start_token, char* runner, char** args, int &arg_count, bool include);
 
 int main() {
-  // time user input and convert to tokens
-  // handle command
   while(1){
     // print $ on STD err as prompt and read in user input
     char input[1000];
@@ -25,7 +24,7 @@ int main() {
     }
     
     //error if input > 1000 characters
-    if(std::cin.fail()){
+    if(std::cin.fail() || input[0]=='\n'){
       std::cerr << "Error: input exceeds 1000 characters" << std::endl;
       std::cin.clear();
       std::cin.ignore(INT_MAX, '\n');
@@ -40,7 +39,22 @@ int main() {
       continue;
     }
 
-    runCommand(const_cast<const char**>(tokens));
+    //TESTING
+    int b = 0;
+    while (tokens[b] != nullptr) {
+        std::cout << tokens[b] << std::endl;
+        ++b;
+    }
+
+    //runCommand(const_cast<const char**>(tokens));
+
+    //free allocated memory
+    int i = 0;
+    while(tokens[i]!=NULL){
+      delete[] tokens[i];
+      i++;
+    }
+    delete[] tokens;
     
   }
 
@@ -53,12 +67,10 @@ char** parseTokens(char input[]){
   //trim leading and trailing spaces
   char* start = input;
   char* end = input + strlen(input);
-
   //advance leading edge to remove spaces
   while(isspace(*start)){
     start++;
   }
-
   //retract trailing edge to remove spaces
   while(isspace(*end)){
     end--;
@@ -66,23 +78,29 @@ char** parseTokens(char input[]){
   *(end+1)='\0'; //replace null terminating char if the end was moved
 
   //split input delimited by one or more spaces into tokens
-  char* runner = start;
-  char* start_token = runner;
+  char* runner = start; //iterates through input string
+  char* start_token = runner; //start of a token
+  //keep track of which state for what type of token is being captured
   bool s_quote = false;
-  int s_count = 0;
   bool d_quote = false;
-  int d_count = 0;
   bool norm = false;
+  bool prev_space = false;
+  //count the ' and " characters
+  int s_count = 0;
+  int d_count = 0;
+  //output
   char** args = new char*[100];
   int arg_count=0;
+  
   while(*runner!='\0'){
     //single/double quotes count as one token
     if(*runner=='\''){
+      prev_space=false;
       if(!s_quote&&!d_quote&&!norm){ //start token capture if no one else has
         start_token=runner;
         s_quote=true;
         s_count++;
-      }else if(d_quote){ //if double quote going on and single is encountered
+      }else if(d_quote){ //if double quote going on and single is encountered record and proceed
         if(d_count>0){
           d_count--;
         }else{
@@ -90,32 +108,23 @@ char** parseTokens(char input[]){
         }
         runner++;
         continue;
-      }else if(norm&&!s_quote){ //case where space is encountered before opening quote
+      }else if(norm&&!s_quote){ //case where space is encountered before opening quote then change state to quote
         start_token=runner;
         s_quote=true;
         s_count++;
         norm=false;
-      }else{ 
+      }else{ //encounter closing quote then add token to args
         s_count--;
         s_quote=false;
-        int t_len = strlen(start_token)-strlen(runner)+1;
-        char* token = new char[t_len+1];//+1 for null terminating char
-        strncpy(token,start_token,t_len);
-        token[t_len] = '\0'; 
-        if(arg_count<=99){ //error if more than 100 arguments
-          args[arg_count] = token;
-          arg_count++;
-        }else{
-          std::cerr << "Error: too many arguments" << std::endl;
-          return nullptr;
-        }
+        addToken(start_token,runner,args,arg_count,true);
       }
-    }else if(*runner=='"'){ 
+    }else if(*runner=='"'){
+      prev_space=false;
       if(!s_quote&&!d_quote&&!norm){ //start token capture if no one else has
         start_token=runner;
         d_count++;
         d_quote=true;
-      }else if(s_quote){ //if single quote is going on and double is encountered
+      }else if(s_quote){ //if single quote is going on and double is encountered record and proceed
         if(s_count>0){
           s_count--;
         }else{
@@ -123,50 +132,39 @@ char** parseTokens(char input[]){
         }
         runner++;
         continue;
-      }else if(norm&&!d_quote){ //case where space is encountered before opening quote
+      }else if(norm&&!d_quote){ //case where space is encountered before opening quote then change state to quote
         start_token=runner;
         d_quote=true;
         d_count++;
         norm=false;
-      }else{//d_quote is true and end quote encountered
+      }else{//end quote encountered then add token to args
         d_count--;
         d_quote=false;
-        int t_len = strlen(start_token)-strlen(runner)+1;
-        char* token = new char[t_len+1];//+1 for null terminating char
-        strncpy(token,start_token,t_len);
-        token[t_len] = '\0'; 
-        if(arg_count<=100){ //error if more than 100 arguments
-          args[arg_count] = token;
-          arg_count++;
-        }else{
-          std::cerr << "Error: too many arguments" << std::endl;
-          return nullptr;
-        }
+        addToken(start_token,runner,args,arg_count,true);
       }
     }else if(*runner==' '){ //normal case of space delimted word
       if(!s_quote&&!d_quote&&!norm){ //start token capture if no one else has
         start_token=runner+1;
+        prev_space=true;
         norm=true;
       }else if(s_quote||d_quote){ //ignore spaces if token involves quotes
         runner++;
         continue;
       }else{ //ending space encountered
-        int t_len = strlen(start_token)-strlen(runner);
-        char* token = new char[t_len+1];//+1 for null terminating char
-        strncpy(token,start_token,t_len);
-        token[t_len] = '\0'; 
-        if(arg_count<=100){ //error if more than 100 arguments
-          args[arg_count] = token;
-          arg_count++;
-        }else{
-          std::cerr << "Error: too many arguments" << std::endl;
-          return nullptr;
+        if(prev_space){
+          start_token=runner+1;
+          runner++;
+          continue;
         }
+        addToken(start_token,runner,args,arg_count,false);
         //another space has been encountered
         norm=true;
         start_token=runner+1;
       }
+      //just finished handling a space
+      prev_space=true;
     }else{ //just a character
+      prev_space=false;
       if(!s_quote&&!d_quote&&!norm){ //start token capture if no one else has
         start_token=runner;
         norm=true;
@@ -176,20 +174,9 @@ char** parseTokens(char input[]){
     runner++;
   }
 
-  //EOF is the end of the token
-  if(norm){ //start token capture if no one else has
-    norm=false;
-    int t_len = strlen(start_token)-strlen(runner);
-    char* token = new char[t_len+1];//+1 for null terminating char
-    strncpy(token,start_token,t_len);
-    token[t_len] = '\0'; 
-    if(arg_count<=100){ //error if more than 100 arguments
-      args[arg_count] = token;
-      arg_count++;
-    }else{
-      std::cerr << "Error: too many arguments" << std::endl;
-      return nullptr;
-    }
+  //for case when EOF is the end of the token
+  if(norm){ //if a space delimited word has been started
+    addToken(start_token,runner,args,arg_count,false);
   }
   
   //error if quote mismatch
@@ -243,7 +230,6 @@ void runCommand(const char *args[]) {
       //copy characters into new path
       snprintf(newpath, bufferSize + 1, "%.*s", (int)bufferSize, envptr);
       sprintf(newpath + bufferSize, "/%s", arg0); //unix treats multiple backslash ex: // as one / so /ls is a valid relative path and would become //ls and still work
-      // std::cout<<newpath<<std::endl;
       int c2 = execv(newpath, typed_args);
       if (c2 < 0) { // error
         perror("Invalid Input");
@@ -253,7 +239,7 @@ void runCommand(const char *args[]) {
       delete[] newpath;
     }
   } else if (pid > 0) { // parent
-    if (waitpid(pid, &status, 0) < 0) { // Theres an error
+    if (waitpid(pid, &status, 0) < 0) {
       perror("Child Process Failed");
     }
   } else if (pid < 0) { // error
@@ -268,9 +254,23 @@ void cdCommand(const char* args[]){
   if (chdir(args[1]) == -1){
     perror("Invalid Path");
   }
+}
 
-  //TESTING
-  char cwd[100];
-  std::cout<<"cd complete: "<<getcwd(cwd, sizeof(cwd))<<std::endl;
-  
+//add token to args array
+void addToken(char* start_token, char* runner, char** args, int &arg_count, bool include){
+  int t_len=0;
+  if(include){ //whether or not inclusive of last character (need for " and ' cases)
+    t_len = strlen(start_token)-strlen(runner)+1;
+  }else{
+    t_len = strlen(start_token)-strlen(runner);
+  }
+  char* token = new char[t_len+1];//+1 for null terminating char
+  strncpy(token,start_token,t_len);
+  token[t_len] = '\0'; 
+  if(arg_count<=99){ //error if more than 100 arguments
+    args[arg_count] = token;
+    arg_count++;
+  }else{
+    std::cerr << "Error: too many arguments" << std::endl;
+  }
 }
