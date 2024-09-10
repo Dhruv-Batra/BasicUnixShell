@@ -35,6 +35,11 @@ int main() {
     //clean user input and convert to tokens
     char** tokens = parseTokens(input);
 
+    //check for nullptr
+    if(tokens==nullptr){
+      continue;
+    }
+
     runCommand(const_cast<const char**>(tokens));
     
   }
@@ -97,12 +102,12 @@ char** parseTokens(char input[]){
         char* token = new char[t_len+1];//+1 for null terminating char
         strncpy(token,start_token,t_len);
         token[t_len] = '\0'; 
-        if(arg_count<=100){ //error if more than 100 arguments
+        if(arg_count<=99){ //error if more than 100 arguments
           args[arg_count] = token;
           arg_count++;
         }else{
           std::cerr << "Error: too many arguments" << std::endl;
-          return NULL;
+          return nullptr;
         }
       }
     }else if(*runner=='"'){ 
@@ -135,7 +140,7 @@ char** parseTokens(char input[]){
           arg_count++;
         }else{
           std::cerr << "Error: too many arguments" << std::endl;
-          return NULL;
+          return nullptr;
         }
       }
     }else if(*runner==' '){ //normal case of space delimted word
@@ -210,12 +215,6 @@ void runCommand(const char *args[]) {
   pid_t pid;
   char *arg0 = const_cast<char *>(args[0]);
   char* const* typed_args = const_cast<char *const *>(args);
-
-  //check for nullptr
-  if(args==nullptr){
-    std::cerr<<"Error: invalid input"<<std::endl;
-    return;
-  }
 
   //check if command is exit
   if (strcmp(arg0,"exit")==0) {
