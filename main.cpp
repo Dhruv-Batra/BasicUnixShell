@@ -39,19 +39,27 @@ int main() {
         continue;
     }
 
+    //TESTING
+     int b = 0;
+    std::cout << "\n\n\n\n\n" << std::endl;
+     while (tokens[b] != nullptr) {
+         std::cout << tokens[b] << std::endl;
+         ++b;
+     }
+    std::cout << "\n\n\n\n\n" << std::endl;
 
-    if(*tokens[0]!='\n'){
-         runCommand(const_cast<const char **>(tokens));
-    }
 
-    // TESTING
-     // int b = 0;
-     // while (tokens[b] != nullptr) {
-     //     std::cout << tokens[b] << std::endl;
-     //     ++b;
-     // }
+    runCommand(const_cast<const char **>(tokens));
 
-    
+    //TESTING
+     int c = 0;
+    std::cout << "\n\n\n\n\n" << std::endl;
+     while (tokens[c] != nullptr) {
+         std::cout << tokens[c] << std::endl;
+         ++c;
+     }
+    std::cout << "\n\n\n\n\n" << std::endl;
+
 
     // free allocated memory
     int i = 0;
@@ -69,7 +77,12 @@ int main() {
 char **parseTokens(char input[]) {
   // trim leading and trailing spaces
   char *start = input;
-  char *end = input + strlen(input);
+  char *end = input + strlen(input)-1;
+
+  if(*start=='\0'){ //check if just enter was pressed which results in just null terminating char
+    return nullptr;
+  }
+
   // advance leading edge to remove spaces
   while (isspace(*start)) {
     start++;
@@ -80,13 +93,9 @@ char **parseTokens(char input[]) {
   }
   *(end + 1) = '\0'; // replace null terminating char if the end was moved
 
-  if(*start=='\0'){ //check if just enter was pressed which results in just null r
-    return nullptr;
-  }
-
   // split input delimited by one or more spaces into tokens
   char *runner = start;       // iterates through input string
-  char *start_token = runner; // start of a token
+  char *start_token = start; // start of a token
   // keep track of which state for what type of token is being captured
   bool s_quote = false;
   bool d_quote = false;
@@ -103,13 +112,11 @@ char **parseTokens(char input[]) {
     // single/double quotes count as one token
     if (*runner == '\'') {
       prev_space = false;
-      if (!s_quote && !d_quote &&
-          !norm) { // start token capture if no one else has
+      if (!s_quote && !d_quote && !norm) { // start token capture if no one else has
         start_token = runner+1;
         s_quote = true;
         s_count++;
-      } else if (d_quote) { // if double quote going on and single is
-                            // encountered record and proceed
+      } else if (d_quote) { // if double quote going on and single is encountered
         runner++;
         continue;
       } else if (norm && !s_quote) { // case where space is encountered before opening quote then change state to quote
@@ -159,15 +166,14 @@ char **parseTokens(char input[]) {
         }
         addToken(start_token, runner, args, arg_count);
         // another space has been encountered
-        norm = true;
+        norm = false;
         start_token = runner + 1;
       }
       // just finished handling a space
       prev_space = true;
     } else { // just a character
       prev_space = false;
-      if (!s_quote && !d_quote &&
-          !norm) { // start token capture if no one else has
+      if (!s_quote && !d_quote && !norm) { // start token capture if no one else has
         start_token = runner;
         norm = true;
       }
@@ -187,6 +193,7 @@ char **parseTokens(char input[]) {
     return nullptr;
   }
 
+  args[arg_count] = nullptr;
   return args;
 }
 
@@ -264,14 +271,15 @@ void cdCommand(const char *args[]) {
 
 // add token to args array
 void addToken(char *start_token, char *runner, char **args, int &arg_count) {
-  int t_len = 0;
-  t_len = strlen(start_token) - strlen(runner);
+  int t_len = runner - start_token;
   char *token = new char[t_len + 1]; //+1 for null terminating char
   strncpy(token, start_token, t_len);
   token[t_len] = '\0';
   if (arg_count <= 99) { // error if more than 100 arguments
     args[arg_count] = token;
     arg_count++;
+    //TESTING
+    std::cout<<"added token: "<<token<<std::endl;
   } else {
     std::cerr << "Error: too many arguments" << std::endl;
   }
