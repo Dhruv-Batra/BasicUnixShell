@@ -9,8 +9,7 @@
 void runCommand(const char *args[]);
 void cdCommand(const char *args[]);
 char **parseTokens(char input[]);
-void addToken(char *start_token, char *runner, char **args, int &arg_count,
-              bool include);
+void addToken(char *start_token, char *runner, char **args, int &arg_count);
 
 int main() {
   while (1) {
@@ -106,7 +105,7 @@ char **parseTokens(char input[]) {
       prev_space = false;
       if (!s_quote && !d_quote &&
           !norm) { // start token capture if no one else has
-        start_token = runner;
+        start_token = runner+1;
         s_quote = true;
         s_count++;
       } else if (d_quote) { // if double quote going on and single is
@@ -114,34 +113,34 @@ char **parseTokens(char input[]) {
         runner++;
         continue;
       } else if (norm && !s_quote) { // case where space is encountered before opening quote then change state to quote
-        start_token = runner;
+        start_token = runner+1;
         s_quote = true;
         s_count++;
         norm = false;
       } else { // encounter closing quote then add token to args
         s_count--;
         s_quote = false;
-        addToken(start_token, runner, args, arg_count, true);
+        addToken(start_token, runner, args, arg_count);
       }
     } else if (*runner == '"') {
       prev_space = false;
       if (!s_quote && !d_quote &&
           !norm) { // start token capture if no one else has
-        start_token = runner;
+        start_token = runner+1;
         d_count++;
         d_quote = true;
       } else if (s_quote) { // if single quote is going on and double is encountered record and proceed
         runner++;
         continue;
       } else if (norm && !d_quote) { // case where space is encountered before opening quote then change state to quote
-        start_token = runner;
+        start_token = runner+1;
         d_quote = true;
         d_count++;
         norm = false;
       } else { // end quote encountered then add token to args
         d_count--;
         d_quote = false;
-        addToken(start_token, runner, args, arg_count, true);
+        addToken(start_token, runner, args, arg_count);
       }
     } else if (*runner == ' ') { // normal case of space delimted word
       if (!s_quote && !d_quote &&
@@ -158,7 +157,7 @@ char **parseTokens(char input[]) {
           runner++;
           continue;
         }
-        addToken(start_token, runner, args, arg_count, false);
+        addToken(start_token, runner, args, arg_count);
         // another space has been encountered
         norm = true;
         start_token = runner + 1;
@@ -179,7 +178,7 @@ char **parseTokens(char input[]) {
 
   // for case when EOF is the end of the token
   if (norm) { // if a space delimited word has been started
-    addToken(start_token, runner, args, arg_count, false);
+    addToken(start_token, runner, args, arg_count);
   }
 
   // error if quote mismatch
@@ -264,15 +263,9 @@ void cdCommand(const char *args[]) {
 }
 
 // add token to args array
-void addToken(char *start_token, char *runner, char **args, int &arg_count,
-              bool include) {
+void addToken(char *start_token, char *runner, char **args, int &arg_count) {
   int t_len = 0;
-  if (include) { // whether or not inclusive of last character (need for " and '
-                 // cases)
-    t_len = strlen(start_token) - strlen(runner) + 1;
-  } else {
-    t_len = strlen(start_token) - strlen(runner);
-  }
+  t_len = strlen(start_token) - strlen(runner);
   char *token = new char[t_len + 1]; //+1 for null terminating char
   strncpy(token, start_token, t_len);
   token[t_len] = '\0';
