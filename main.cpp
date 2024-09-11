@@ -25,7 +25,7 @@ int main() {
 
     // error if input > 1000 characters
     if (std::cin.fail() || input[0] == '\n') {
-      std::cerr << "Error: input exceeds 1000 characters" << std::endl;
+      std::cerr << "error: input exceeds 1000 characters" << std::endl;
       std::cin.clear();
       std::cin.ignore(INT_MAX, '\n');
       continue;
@@ -40,25 +40,17 @@ int main() {
     }
 
     //TESTING
-     int b = 0;
-    std::cout << "\n\n\n\n\n" << std::endl;
-     while (tokens[b] != nullptr) {
-         std::cout << tokens[b] << std::endl;
-         ++b;
-     }
-    std::cout << "\n\n\n\n\n" << std::endl;
+    //  int b = 0;
+    // std::cout << "\n\n\n\n\n" << std::endl;
+    //  while (tokens[b] != nullptr) {
+    //      std::cout << tokens[b] << std::endl;
+    //      ++b;
+    //  }
+    // std::cout << "\n\n\n\n\n" << std::endl;
 
 
     runCommand(const_cast<const char **>(tokens));
 
-    //TESTING
-     int c = 0;
-    std::cout << "\n\n\n\n\n" << std::endl;
-     while (tokens[c] != nullptr) {
-         std::cout << tokens[c] << std::endl;
-         ++c;
-     }
-    std::cout << "\n\n\n\n\n" << std::endl;
 
 
     // free allocated memory
@@ -189,7 +181,7 @@ char **parseTokens(char input[]) {
 
   // error if quote mismatch
   if (s_count != 0 || d_count != 0) {
-    std::cerr << "Error: quote mismatch" << std::endl;
+    std::cerr << "error: quote mismatch" << std::endl;
     return nullptr;
   }
 
@@ -206,7 +198,7 @@ char **parseTokens(char input[]) {
 */
 void runCommand(const char *args[]) {
 
-  int status;
+  int status=0;
   pid_t pid;
   char *arg0 = const_cast<char *>(args[0]);
   char *const *typed_args = const_cast<char *const *>(args);
@@ -246,18 +238,18 @@ void runCommand(const char *args[]) {
                  // valid relative path and would become //ls and still work
       int c2 = execv(newpath, typed_args);
       if (c2 < 0) { // error
-        perror("Invalid Input");
-        std::cerr << "error: command exited with code 1" << std::endl;
+        perror("error: invalid input");
         exit(1);
       }
       delete[] newpath;
     }
   } else if (pid > 0) { // parent
-    if (waitpid(pid, &status, 0) < 0) {
-      perror("Child Process Failed");
+    waitpid(pid, &status, 0);
+
+    int exitStatus = WEXITSTATUS(status);
+    if(WIFEXITED(status) && exitStatus!=0){ //only true if error
+      std::cerr<<"command exited with code "<<exitStatus<<std::endl;
     }
-  } else if (pid < 0) { // error
-    perror("Process Creation Error");
   }
 }
 
@@ -265,7 +257,7 @@ void runCommand(const char *args[]) {
 void cdCommand(const char *args[]) {
   // chdir automatically handles both absolute and relative paths
   if (chdir(args[1]) == -1) {
-    perror("Invalid Path");
+    perror("error: invalid path");
   }
 }
 
@@ -278,9 +270,7 @@ void addToken(char *start_token, char *runner, char **args, int &arg_count) {
   if (arg_count <= 99) { // error if more than 100 arguments
     args[arg_count] = token;
     arg_count++;
-    //TESTING
-    std::cout<<"added token: "<<token<<std::endl;
   } else {
-    std::cerr << "Error: too many arguments" << std::endl;
+    std::cerr << "error: too many arguments" << std::endl;
   }
 }
